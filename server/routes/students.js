@@ -11,13 +11,33 @@ router.get('/', async (req, res, next) => {
     let errorResult = { errors: [], count: 0, pageCount: 0 };
 
     // Phase 2A: Use query params for page & size
-    // Your code here
+    let page = req.query.page;
+    let size = req.query.size;
+    let limit;
+    let offset;
 
-    // Phase 2B: Calculate limit and offset
-    // Phase 2B (optional): Special case to return all students (page=0, size=0)
-    // Phase 2B: Add an error message to errorResult.errors of
+    if (isNaN(page)) {
+        page = 1;
+    }
+
+    if (isNaN(size)) {
+        size = 10;
+    }
+
+    if (size == 0 && page == 0) {
+        // Phase 2B (optional): Special case to return all students (page=0, size=0)
+        limit = 10000000;
+        offset = 0;
+    } else if (size > 200 || page < 1) {
+        // Phase 2B: Add an error message to errorResult.errors of
         // 'Requires valid page and size params' when page or size is invalid
-    // Your code here
+        errorResult.errors.push({ message: 'Requires valid page and size params'});
+    } else {
+        // Phase 2B: Calculate limit and offset
+        limit = size;
+        offset = ((page - 1) * size);
+    }
+
 
     // Phase 4: Student Search Filters
     /*
@@ -48,6 +68,10 @@ router.get('/', async (req, res, next) => {
 
 
     // Phase 2C: Handle invalid params with "Bad Request" response
+    if (errorResult.errors.length > 0) {
+        errorResult.count = await Student.count();
+        next(errorResult);
+    }
     // Phase 3C: Include total student count in the response even if params were
         // invalid
         /*
@@ -62,18 +86,24 @@ router.get('/', async (req, res, next) => {
                     pageCount: 0
                 }
         */
-    // Your code here
+    // See above - have to add the count object before pushing the errorResult to the error handler
 
     let result = {};
 
     // Phase 3A: Include total number of results returned from the query without
         // limits and offsets as a property of count on the result
         // Note: This should be a new query
+    result.count = await Student.count({ where: where });
 
     result.rows = await Student.findAll({
         attributes: ['id', 'firstName', 'lastName', 'leftHanded'],
         where,
-        // Phase 1A: Order the Students search results
+        order: [
+            ['lastName', 'ASC'],
+            ['firstName', 'ASC']
+        ],
+        limit: limit,
+        offset: offset
     });
 
     // Phase 2E: Include the page number as a key of page in the response data
@@ -86,7 +116,13 @@ router.get('/', async (req, res, next) => {
                 page: 1
             }
         */
-    // Your code here
+    if (page == 0 && size == 0) {
+        result.page = 1;
+        result.pageCount = 1;
+    } else {
+        result.page = page;
+        result.pageCount = (Math.ceil((result.count) / size ));
+    }
 
     // Phase 3B:
         // Include the total number of available pages for this query as a key
@@ -102,7 +138,8 @@ router.get('/', async (req, res, next) => {
                 pageCount: 10 // total number of available pages for this query
             }
         */
-    // Your code here
+       // See above
+
 
     res.json(result);
 });
