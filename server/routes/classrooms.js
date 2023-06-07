@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 
 // Import model(s)
-const { Classroom, Supply, StudentClassroom } = require('../db/models');
+const { Classroom, Supply, StudentClassroom, Student } = require('../db/models');
 const { Op } = require('sequelize');
 
 // List of classrooms
@@ -91,7 +91,15 @@ router.get('/:id', async (req, res, next) => {
             // Include students of the classroom and order students by lastName
                 // then firstName (both in ascending order)
                 // (Optional): No need to include the StudentClassrooms
-        // Your code here
+        include: [{ model: Supply, attributes: ['id', 'name', 'category', 'handed'] },
+            { model: Student, attributes: ['id', 'firstName', 'lastName', 'leftHanded'], through: { model: StudentClassroom, attributes: [] } } ],
+        order: [
+            [Supply, 'category', 'ASC'],
+            [Supply, 'name', 'ASC'],
+            [Student, 'lastName', 'ASC'],
+            [Student, 'firstName', 'ASC']
+        ]
+
     });
 
     if (!classroom) {
