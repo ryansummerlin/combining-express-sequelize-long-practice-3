@@ -36,7 +36,18 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     // Phase 5: Alternate solution 3
-    // Your code here
+    supplyCount: {
+      type: DataTypes.VIRTUAL,
+    },
+    studentCount: {
+      type: DataTypes.VIRTUAL,
+    },
+    overloaded: {
+      type: DataTypes.VIRTUAL,
+    },
+    avgGrade: {
+      type: DataTypes.VIRTUAL,
+    }
   }, {
     sequelize,
     modelName: 'Classroom',

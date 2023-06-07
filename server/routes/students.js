@@ -64,7 +64,21 @@ router.get('/', async (req, res, next) => {
     */
     const where = {};
 
-    // Your code here
+    if (req.query.firstName) {
+        where.firstName = { [Op.like]: `%${req.query.firstName}%`};
+    }
+
+    if (req.query.lastName) {
+        where.lastName = { [Op.like]: `%${req.query.lastName}%`};
+    }
+
+    if (req.query.lefty === 'true') {
+        where.leftHanded = true;
+    } else if (req.query.lefty === 'false') {
+        where.leftHanded = false;
+    } else if (req.query.lefty && req.query.lefty !== 'true' && req.query.lefty !== 'false') {
+        errorResult.errors.push({ message: 'Lefty should be either true or false'} );
+    }
 
 
     // Phase 2C: Handle invalid params with "Bad Request" response
@@ -97,7 +111,7 @@ router.get('/', async (req, res, next) => {
 
     result.rows = await Student.findAll({
         attributes: ['id', 'firstName', 'lastName', 'leftHanded'],
-        where,
+        where: where,
         order: [
             ['lastName', 'ASC'],
             ['firstName', 'ASC']
