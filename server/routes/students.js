@@ -3,8 +3,9 @@ const express = require('express');
 const router = express.Router();
 
 // Import model(s)
-const { Student } = require('../db/models');
+const { Student, Classroom, StudentClassroom } = require('../db/models');
 const { Op } = require("sequelize");
+const paginate = require('../utils/pagination');
 
 // List
 router.get('/', async (req, res, next) => {
@@ -13,31 +14,10 @@ router.get('/', async (req, res, next) => {
     // Phase 2A: Use query params for page & size
     let page = req.query.page;
     let size = req.query.size;
+
     let limit;
     let offset;
-
-    if (isNaN(page)) {
-        page = 1;
-    }
-
-    if (isNaN(size)) {
-        size = 10;
-    }
-
-    if (size == 0 && page == 0) {
-        // Phase 2B (optional): Special case to return all students (page=0, size=0)
-        limit = 10000000;
-        offset = 0;
-    } else if (size > 200 || page < 1) {
-        // Phase 2B: Add an error message to errorResult.errors of
-        // 'Requires valid page and size params' when page or size is invalid
-        errorResult.errors.push({ message: 'Requires valid page and size params'});
-    } else {
-        // Phase 2B: Calculate limit and offset
-        limit = size;
-        offset = ((page - 1) * size);
-    }
-
+    [limit, offset] = paginate(req, errorResult);
 
     // Phase 4: Student Search Filters
     /*
@@ -114,10 +94,13 @@ router.get('/', async (req, res, next) => {
         where: where,
         order: [
             ['lastName', 'ASC'],
-            ['firstName', 'ASC']
+            ['firstName', 'ASC'],
+            [Classroom, StudentClassroom, 'grade', 'DESC']
         ],
         limit: limit,
-        offset: offset
+        offset: offset,
+        include: { model: Classroom, attributes: ['id', 'name'],
+            through: { model: StudentClassroom, attributes: ['grade'] } }
     });
 
     // Phase 2E: Include the page number as a key of page in the response data

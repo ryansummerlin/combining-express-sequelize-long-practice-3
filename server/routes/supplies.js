@@ -1,12 +1,23 @@
 // Instantiate router - DO NOT MODIFY
 const express = require('express');
 const router = express.Router();
+const sequelize = require('sequelize');
 
 // Import model(s)
-const { Supply } = require('../db/models');
+const { Supply, Classroom, Student, StudentClassroom } = require('../db/models');
+const paginate = require('../utils/pagination');
 
 // List of supplies by category
 router.get('/category/:categoryName', async (req, res, next) => {
+    let errorResult = { errors: [], count: 0, pageCount: 0 };
+
+    let limit;
+    let offset;
+    [limit, offset] = paginate(req, errorResult);
+
+    console.log(limit);
+    console.log(offset);
+
     // Phase 1C:
         // Find all supplies by category name
         // Order results by supply's name then handed
@@ -15,14 +26,18 @@ router.get('/category/:categoryName', async (req, res, next) => {
             attributes: ['id', 'name', 'category', 'handed', 'classroomId'],
             where: { category: req.params.categoryName },
             order: [
+                [Classroom, 'name'],
                 ['name'],
                 ['handed']
-            ]
+            ],
+            include: { model: Classroom, attributes: ['id', 'name']},
+            limit: limit,
+            offset: offset
         });
     // Phase 8A:
         // Include Classroom in the supplies query results
         // Order nested classroom results by name first then by supply name
-    // Your code here
+    // Included above
 
     res.json(supplies);
 });
@@ -40,7 +55,25 @@ router.get('/scissors/calculate', async (req, res, next) => {
         // result.totalNumScissors should equal the total number of all
             // "Safety Scissors" currently in all classrooms, regardless of
             // handed-ness
-    // Your code here
+    const numRightyScissors = await Supply.count({ where: {
+        name: 'Safety Scissors',
+        handed: 'right'
+    }});
+
+    result.numRightyScissors = numRightyScissors;
+
+    const numLeftyScissors = await Supply.count({ where: {
+        name: 'Safety Scissors',
+        handed: 'left'
+    }});
+
+    result.numLeftyScissors = numLeftyScissors;
+
+    const totalNumScissors = await Supply.count({ where: {
+        name: 'Safety Scissors'
+    }});
+
+    result.totalNumScissors = totalNumScissors;
 
     // Phase 10B: Total number of right-handed and left-handed students in all
         // classrooms
@@ -55,7 +88,21 @@ router.get('/scissors/calculate', async (req, res, next) => {
                 // right-handed students in all classrooms.
         // result.numLeftHandedStudents should equal the total number of
             // left-handed students in all classrooms
-    // Your code here
+    const numRightHandedStudents = await StudentClassroom.count({
+        include: { model: Student, attributes: [], where: {
+            leftHanded: false
+        } }
+    });
+
+    result.numRightHandedStudents = numRightHandedStudents;
+
+    const numLeftHandedStudents = await StudentClassroom.count({
+        include: { model: Student, attributes: [], where: {
+            leftHanded: true
+        } }
+    });
+
+    result.numLeftHandedStudents = numLeftHandedStudents;
 
     // Phase 10C: Total number of scissors still needed for all classrooms
         // result.numRightyScissorsStillNeeded should equal the total number
@@ -67,7 +114,9 @@ router.get('/scissors/calculate', async (req, res, next) => {
         // result.numLeftyScissorsStillNeeded should equal the total number
             // of left-handed scissors still needed to be added to all the
             // classrooms
-    // Your code here
+    result.numRightyScissorsStillNeeded = numRightHandedStudents - numRightyScissors;
+
+    result.numLeftyScissorsStillNeeded = numLeftHandedStudents - numLeftyScissors;
 
     res.json(result);
 });

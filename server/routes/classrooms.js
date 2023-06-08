@@ -1,10 +1,13 @@
 // Instantiate router - DO NOT MODIFY
 const express = require('express');
 const router = express.Router();
+const sequelize = require('sequelize');
+
 
 // Import model(s)
 const { Classroom, Supply, StudentClassroom, Student } = require('../db/models');
 const { Op } = require('sequelize');
+const paginate = require('../utils/pagination');
 
 // List of classrooms
 router.get('/', async (req, res, next) => {
@@ -70,12 +73,16 @@ router.get('/', async (req, res, next) => {
     }
 
     const classrooms = await Classroom.findAll({
-        attributes: [ 'id', 'name', 'studentLimit' ],
-        where,
+        attributes: ['id', 'name', 'studentLimit',
+            [sequelize.fn("AVG", sequelize.col("StudentClassrooms.grade")), 'avgGrade'],
+            [sequelize.fn("COUNT", sequelize.col("StudentClassrooms.studentId")), 'numStudents'] ],
+        where: where,
         // Phase 1B: Order the Classroom search results
         order: [
             ['name', 'ASC']
-        ]
+        ],
+        group: 'Classroom.id',
+        include: { model: StudentClassroom, attributes: [] },
     });
 
     res.json(classrooms);
